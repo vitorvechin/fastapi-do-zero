@@ -12,3 +12,12 @@ def test_root_deve_retornar_ok_e_ola_mundo():
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'Hello world!'}
+
+
+def test_exercicio_hello_world_html():
+    client = TestClient(app)
+
+    response = client.get('/exercicio-html')
+
+    assert response.status_code == HTTPStatus.OK
+    assert '<h1>Hello world!</h1>' in response.text
