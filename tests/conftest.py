@@ -30,10 +30,11 @@ def session():
         engine.dispose()
 
 
-@contextmanager
+@contextmanager  # Allows this function to be used with a "with" statement
 def _mock_db_time(*, model, time=datetime(2026, 10, 20)):
 
-    def fake_time_hook(mapper, connection, target):
+    # Underscored function name to indicate it's intended for internal use only
+    def fake_time_hook(_mapper, _connection, target):
         if hasattr(target, 'created_at'):
             target.created_at = time
 
