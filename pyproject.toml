@@ -20,6 +20,7 @@ dev = [
     "pytest-cov (>=7.1.0,<8.0.0)",
     "ruff (>=0.17.0,<0.18.0)",
     "typos (>=1.51.1,<2.0.0)",
+    "pytest-random-order (>=1.2.0,<2.0.0)",
 ]
 
 [tool.ruff]
@@ -36,7 +37,7 @@ quote-style = 'single'
 
 [tool.pytest]
 pythonpath = ['.']
-addopts = ['-p', 'no:warnings', '--cov=fast_zero', '--cov-context=test']
+addopts = ['-p', 'no:warnings', '--cov=fast_zero', '--cov-context=test', '--cov-branch', '--random-order']
 
 [tool.poe.tasks]
 lint = "ruff check"
