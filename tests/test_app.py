@@ -12,7 +12,7 @@ def test_root_deve_retornar_ok_e_ola_mundo(client):
 
 def test_create_user(client):
     response = client.post(
-        '/users/',
+        '/users',
         json={
             'username': 'alice',
             'email': 'alice@email.com',
@@ -28,8 +28,36 @@ def test_create_user(client):
     }
 
 
+def test_create_user_username_conflict(client, user):
+    response = client.post(
+        '/users',
+        json={
+            'username': user.username,
+            'email': 'test@email.com',
+            'password': 'test123',
+        },
+    )
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == {'detail': 'Username already exists'}
+
+
+def test_create_user_email_conflict(client, user):
+    response = client.post(
+        '/users',
+        json={
+            'username': 'vitor',
+            'email': user.email,
+            'password': 'test123',
+        },
+    )
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == {'detail': 'Email already exists'}
+
+
 def test_read_empty_users(client):
-    response = client.get('/users/')
+    response = client.get('/users')
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'users': []}
 
@@ -37,7 +65,7 @@ def test_read_empty_users(client):
 def test_read_users(client, user):
 
     user_schema = UserPublic.model_validate(user).model_dump()
-    response = client.get('/users/')
+    response = client.get('/users')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'users': [user_schema]}
@@ -45,7 +73,7 @@ def test_read_users(client, user):
 
 def test_read_user(client, user):
     user_schema = UserPublic.model_validate(user).model_dump()
-    response = client.get('/users/1')
+    response = client.get(f'/users/{user.id}')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == user_schema
@@ -106,7 +134,7 @@ def test_delete_user_not_found(client):
 
 def test_update_integrity_error(client, user):
     client.post(
-        '/users/',
+        '/users',
         json={
             'username': 'vitor',
             'email': 'vitor@test.com',
@@ -125,3 +153,14 @@ def test_update_integrity_error(client, user):
 
     assert response.status_code == HTTPStatus.CONFLICT
     assert response.json() == {'detail': 'Username or email already exists'}
+
+
+def test_get_token(client, user):
+    response = client.post(
+        '/token',
+        data={'username': user.email, 'password': user.plain_password},
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert 'access_token' in response.json()
+    assert response.json()['token_type'] == 'bearer'

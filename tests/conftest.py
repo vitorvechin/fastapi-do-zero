@@ -11,6 +11,7 @@ from fast_zero.app import app
 from fast_zero.database import get_session
 from fast_zero.models import User as UserModel
 from fast_zero.models import table_registry
+from fast_zero.security import get_password_hash
 
 
 @pytest.fixture
@@ -71,12 +72,18 @@ def mock_db_time():
 
 @pytest.fixture
 def user(session: Session):
+    password = 'test123'
+
     mock_user = UserModel(
-        username='test', email='test@test.com', password='test123'
+        username='test',
+        email='test@test.com',
+        password=get_password_hash(password),
     )
 
     session.add(mock_user)
     session.commit()
     session.refresh(mock_user)
+
+    mock_user.plain_password = password
 
     return mock_user
