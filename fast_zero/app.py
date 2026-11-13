@@ -18,6 +18,7 @@ from fast_zero.schemas import (
 )
 from fast_zero.security import (
     create_access_token,
+    get_current_user,
     get_password_hash,
     verify_password,
 )
@@ -65,7 +66,10 @@ def create_user(user: UserSchema, session: Session = Depends(get_session)):
 
 @app.get('/users', status_code=HTTPStatus.OK, response_model=UserList)
 def read_users(
-    limit: int = 10, offset: int = 0, session: Session = Depends(get_session)
+    limit: int = 10,
+    offset: int = 0,
+    session: Session = Depends(get_session),
+    current_user=Depends(get_current_user),
 ):
 
     users = session.scalars(select(UserModel).limit(limit).offset(offset))
@@ -84,23 +88,24 @@ def read_user(user_id: int, session: Session = Depends(get_session)):
 
 @app.put('/users/{user_id}', response_model=UserPublic)
 def update_user(
-    user_id: int, user: UserSchema, session: Session = Depends(get_session)
+    user_id: int,
+    user: UserSchema,
+    session: Session = Depends(get_session),
+    current_user: UserModel = Depends(get_current_user),
 ):
-    user_db = session.scalar(select(UserModel).where(UserModel.id == user_id))
-
-    if not user_db:
-        raise HTTPException(HTTPStatus.NOT_FOUND, detail='User not found')
+    if current_user.id != user_id:
+        raise HTTPException(
+            HTTPStatus.FORBIDDEN, detail='Not enough permissions'
+        )
 
     try:
-        user_db.username = user.username
-        user_db.email = user.email
-        user_db.password = get_password_hash(user.password)
-
-        # add is not needed here since the user_db is already in the session
+        current_user.username = user.username
+        current_user.email = user.email
+        current_user.password = get_password_hash(user.password)
         session.commit()
-        session.refresh(user_db)
+        session.refresh(current_user)
 
-        return user_db
+        return current_user
 
     except IntegrityError:
         raise HTTPException(
@@ -109,13 +114,17 @@ def update_user(
 
 
 @app.delete('/users/{user_id}', response_model=Message)
-def delete_user(user_id: int, session: Session = Depends(get_session)):
-    user_db = session.scalar(select(UserModel).where(UserModel.id == user_id))
+def delete_user(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: UserModel = Depends(get_current_user),
+):
+    if current_user.id != user_id:
+        raise HTTPException(
+            HTTPStatus.FORBIDDEN, detail='Not enough permissions'
+        )
 
-    if not user_db:
-        raise HTTPException(HTTPStatus.NOT_FOUND, detail='User not found')
-
-    session.delete(user_db)
+    session.delete(current_user)
     session.commit()
 
     return {'message': 'User deleted'}
@@ -144,4 +153,4 @@ def login_for_access_token(
     payload = {'sub': user.email}
     access_token = create_access_token(payload)
 
-    return {'access_token': access_token, 'token_type': 'bearer'}
+    return {'access_token': access_token, 'token_type': 'Bearer'}

@@ -84,6 +84,16 @@ def user(session: Session):
     session.commit()
     session.refresh(mock_user)
 
-    mock_user.plain_password = password
+    setattr(mock_user, 'plain_password', password)
 
     return mock_user
+
+
+@pytest.fixture
+def token(client, user):
+    response = client.post(
+        '/token',
+        data={'username': user.email, 'password': user.plain_password},
+    )
+
+    return response.json()['access_token']
